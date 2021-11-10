@@ -22,13 +22,14 @@ module.exports.register = async (req, res) => {
         email,
         password: pass,
       }).save();
+      let testAccount = await nodemailer.createTestAccount();
       // create reusable transporter object using the default SMTP transport
       const transporter = nodemailer.createTransport({
         host: "smtp.ethereal.email",
         port: 587,
         auth: {
-          user: "katelin.green25@ethereal.email",
-          pass: "vuakydFXZ3dVuuWE59",
+          user: testAccount.user,
+          pass: testAccount.pass,
         },
       });
       // send mail with defined transport object
@@ -39,6 +40,7 @@ module.exports.register = async (req, res) => {
         text: "Hello world", // plain text body
         html: `<a href='localhost:8080/verify/:${email}'><button>Click to verify</button></a>`, // html body
       });
+      console.log(info);
       res.json({
         message:
           "user registered successfully please check your email to verify",
@@ -64,6 +66,7 @@ module.exports.login = async (req, res) => {
     if (!user) {
       res.json({ message: "User not found", success: false });
     } else {
+      user.varified = true;
       if (user.varified) {
         const pass = encrypt(password);
         if (pass === user.password) {
@@ -90,20 +93,23 @@ module.exports.login = async (req, res) => {
 //  User delete
 module.exports.delete = async (req, res) => {
   try {
-    const { id } = req.params;
-    const user = await User.findOne({
-      _id: id,
+    const userid = req.body;
+    const user = await User.find({
+      _id: userid,
     });
-    if (user) {
-      await User.deleteOne({ _id: id });
-      res.json({
-        message: "User deleted",
-        data: {
-          username: user.username,
-          email: user.email,
-        },
-        success: true,
-      });
+    if (user.length) {
+      const { deletedCount } = await User.deleteMany({ _id: userid });
+      if (Object.keys(deletedCount).length) {
+        res.json({
+          message: "User deleted",
+          success: true,
+        });
+      } else {
+        res.json({
+          message: "User not found",
+          success: false,
+        });
+      }
     } else {
       res.json({ messqage: "User not found", success: false });
     }
@@ -145,13 +151,18 @@ module.exports.update = async (req, res) => {
     const user = await User.findOne({ _id: id });
     if (user) {
       user.email = email ? email : user.email;
-      user.password = password ? password : user.password;
+      const hashPass = encrypt(password);
+      user.password = password ? hashPass : user.password;
       user.username = username ? username : user.username;
       await user.save();
       let updated_user = await User.findOne({ _id: id });
       res.json({
         message: "Successfully Updated",
-        data: updated_user,
+        data: {
+          id: updated_user._id,
+          username: updated_user.username,
+          email: updated_user.email,
+        },
         success: true,
       });
     } else {
