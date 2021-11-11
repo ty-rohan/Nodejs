@@ -34,13 +34,12 @@ module.exports.register = async (req, res) => {
       });
       // send mail with defined transport object
       let info = await transporter.sendMail({
-        from: '"Fred Foo 👻" <foo@example.com>', // sender address
+        from: testAccount.pass, // sender address
         to: email, // list of receivers
         subject: "Hello ✔", // Subject line
         text: "Hello world", // plain text body
-        html: `<a href='localhost:8080/verify/:${email}'><button>Click to verify</button></a>`, // html body
+        html: `<a href='localhost:8080/verify?email=${email}'><button>Click to verify</button></a>`, // html body
       });
-      console.log(info);
       res.json({
         message:
           "user registered successfully please check your email to verify",
@@ -66,7 +65,6 @@ module.exports.login = async (req, res) => {
     if (!user) {
       res.json({ message: "User not found", success: false });
     } else {
-      user.varified = true;
       if (user.varified) {
         const pass = encrypt(password);
         if (pass === user.password) {
@@ -99,7 +97,7 @@ module.exports.delete = async (req, res) => {
     });
     if (user.length) {
       const { deletedCount } = await User.deleteMany({ _id: userid });
-      if (Object.keys(deletedCount).length) {
+      if (deletedCount > 0) {
         res.json({
           message: "User deleted",
           success: true,
@@ -125,7 +123,7 @@ module.exports.getall = async (req, res) => {
     if (user.length) {
       const tempUser = [];
       user &&
-        user.map((item) => {
+        user.map(item => {
           tempUser.push({
             id: item._id,
             username: item.username,
@@ -175,9 +173,10 @@ module.exports.update = async (req, res) => {
 
 //  Email verifiaction
 module.exports.verify = async (req, res) => {
+  const { email } = req.query;
   const user = await User.findOne({ email });
   if (user) {
-    user.verified = true;
+    user.varified = true;
     const tempUser = await user.save();
     res.json({
       message: "Email has been verified",

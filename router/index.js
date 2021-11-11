@@ -8,6 +8,6 @@ module.exports.routes = () => {
   router.delete("/delete", controller.delete);
   router.get("/all", controller.getall);
   router.put("/update", controller.update);
-  router.get("/verify/:email", controller.verify);
+  router.get("/verify", controller.verify);
   return router;
 };
